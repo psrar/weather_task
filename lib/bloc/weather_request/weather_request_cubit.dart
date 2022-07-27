@@ -1,5 +1,6 @@
 import 'package:bloc/bloc.dart';
 
+//Состояния загрузки погоды для отображения загрузочного экрана
 enum WeatherRequestState { empty, loading, loaded }
 
 class WeatherRequestCubit extends Cubit<WeatherRequestState> {

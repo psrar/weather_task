@@ -39,6 +39,8 @@ dependencies:
   flutter_map: ^2.1.1
   latlong2: ^0.8.1
   http: ^0.13.4
+  connectivity_plus: ^2.3.6
+  geolocator: ^9.0.1
 
 dev_dependencies:
   flutter_test:

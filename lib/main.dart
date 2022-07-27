@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:weather_test/apis/open_weather_map/owm_geocoding_api.dart';
 import 'package:weather_test/apis/open_weather_map/owm_key.dart';
 import 'package:weather_test/apis/open_weather_map/owm_weather_api.dart';
+import 'package:weather_test/bloc/geocoding_api_repository.dart';
 import 'package:weather_test/bloc/location/location_bloc.dart';
-import 'package:weather_test/bloc/weather_repository.dart';
+import 'package:weather_test/bloc/weather_api_repository.dart';
+import 'package:weather_test/bloc/weather_data_repository.dart';
 import 'package:weather_test/bloc/weather_request/weather_request_cubit.dart';
 import 'package:weather_test/pages/location_picker_page/location_picker_page.dart';
 import 'package:weather_test/pages/today_page/today_weather_page.dart';
+import 'package:weather_test/pages/week_page/week_weather_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,49 +23,74 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => LocationBloc()),
         BlocProvider(create: (_) => WeatherRequestCubit()),
+        BlocProvider(create: (_) => LocationBloc()),
       ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Weather test',
-        theme: ThemeData(
-          colorSchemeSeed: Colors.blue,
-          useMaterial3: true,
-        ),
-        home: RepositoryProvider(
-          create: (context) => WeatherRepository(),
-          child: MultiBlocListener(
+      //Репозитории выбранных Api и информации о погоде
+      child: MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider(
+            create: (context) => WeatherRepository(),
+          ),
+          RepositoryProvider(
+            create: (context) =>
+                GeocodingApiRepository(OpenWeatherMapGeocodingApi(owmKey)),
+          ),
+          RepositoryProvider(
+            create: (context) =>
+                WeatherApiRepository(OpenWeatherMapApi(owmKey)),
+          ),
+        ],
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Weather test',
+          theme: ThemeData(
+            colorSchemeSeed: Colors.blue,
+            useMaterial3: true,
+          ),
+          home: MultiBlocListener(
             listeners: [
               getLocationListener(),
               getRequestStateListener(),
             ],
-            child: const HomePage(),
+            child: BlocBuilder<LocationBloc, LocationState>(
+              builder: (context, state) {
+                //Если местоположение не установлено, переходим на экран настройки
+                if (state is LocationSet) {
+                  return const HomePage();
+                } else {
+                  return const LocationPickerPage();
+                }
+              },
+            ),
           ),
         ),
       ),
     );
   }
 
+  //Изменение состояния приложения при изменении
+  //выбранного местоположения
   BlocListener<LocationBloc, LocationState> getLocationListener() {
     return BlocListener<LocationBloc, LocationState>(
       listener: (context, state) async {
+        //Если местоположение установлено, сообщаем об этом пользователю
         if (state is LocationSet) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Прогноз установлен для //${state.ruName}'),
-            duration: const Duration(milliseconds: 800),
+            behavior: SnackBarBehavior.floating,
+            content: Text('Выбранное местоположение: ${state.ruName}'),
           ));
-
+          //Запускаем загрузку погоды для выбранного местоположения
           context
               .read<WeatherRequestCubit>()
               .changeState(WeatherRequestState.loading);
-
-          // await updateForecast(context);
         }
       },
     );
   }
 
+  //Изменение состояния приложения в зависимости от статуса
+  //загрузки погоды
   BlocListener<WeatherRequestCubit, WeatherRequestState>
       getRequestStateListener() {
     return BlocListener<WeatherRequestCubit, WeatherRequestState>(
@@ -74,11 +102,10 @@ class MyApp extends StatelessWidget {
         if (state == WeatherRequestState.loading) {
           final locationState =
               context.read<LocationBloc>().state as LocationSet;
+          final weatherApi = context.read<WeatherApiRepository>().weatherApi;
 
           //Получаем погоду на ближайшие 5 дней
-          await OpenWeatherMapApi(owmKey)
-              .getTodayWeatherInfo(locationState.coords)
-              .then(
+          await weatherApi.getTodayWeatherInfo(locationState.coords).then(
             (forecast) {
               //Записываем погоду в репозиторий для обращения на других экранах
               RepositoryProvider.of<WeatherRepository>(context)
@@ -105,7 +132,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   //Внедрение Bloc сильно и неоправданно усложняло код
-  //В данном случае выбрано простое управление состоянием
+  //В данном случае выбран обычный setState
   int _selectedIndex = 0;
 
   final _pageController = PageController();
@@ -132,7 +159,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Погода'),
-        elevation: 0,
+        elevation: 1,
         centerTitle: true,
         actions: [getPlacePickerWidget(context)],
       ),
@@ -142,26 +169,24 @@ class _HomePageState extends State<HomePage> {
         onPageChanged: (index) => setState(
           () => _selectedIndex = index,
         ),
-        children: [
-          const TodayWeatherPage(),
-          Container(color: Colors.green),
+        children: const [
+          TodayWeatherPage(),
+          WeekWeatherPage(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() => _selectedIndex = index);
-          _pageController.animateToPage(
-            index,
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeOutCubic,
-          );
-        },
+        onDestinationSelected: (index) => _pageController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeOutCubic,
+        ),
         destinations: _navBarDestinations,
       ),
     );
   }
 
+//Виджет в AppBar для выбора местоположения
   Widget getPlacePickerWidget(BuildContext context) {
     return IconButton(
       onPressed: () {

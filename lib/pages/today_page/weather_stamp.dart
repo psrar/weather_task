@@ -2,21 +2,26 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:weather_test/apis/weather_api.dart';
 
+//Виджет отображения информации о погоде
 class WeatherStamp extends StatelessWidget {
   final WeatherInfo weatherInfo;
-  final double fontSize;
+  final double tempFontSize;
+  final double secondaryFontSize;
 
-  const WeatherStamp({Key? key, required this.weatherInfo, this.fontSize = 44})
+  const WeatherStamp(
+      {Key? key,
+      required this.weatherInfo,
+      required this.tempFontSize,
+      required this.secondaryFontSize})
       : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    String temperature = weatherInfo.temperature.round().toString();
-    if (temperature[0] != '-') temperature = '+$temperature';
-    final time =
+    final String temperature = _temperatureToString(weatherInfo.temperature);
+    final String time =
         '${weatherInfo.timeStamp.hour.toString().padLeft(2, '0')}:${weatherInfo.timeStamp.minute.toString().padLeft(2, '0')}';
-    final humidity = '${weatherInfo.humidity}%';
-    final windSpeed = '${weatherInfo.windspeed.round()}м/с';
+    final String humidity = '${weatherInfo.humidity}%';
+    final String windSpeed = '${weatherInfo.windspeed.round()}м/с';
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -25,7 +30,7 @@ class WeatherStamp extends StatelessWidget {
         Text(
           temperature,
           style: TextStyle(
-            fontSize: fontSize,
+            fontSize: tempFontSize,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -35,16 +40,16 @@ class WeatherStamp extends StatelessWidget {
             Text(
               humidity,
               style: TextStyle(
-                fontSize: fontSize - 24,
-                fontWeight: FontWeight.w800,
+                fontSize: secondaryFontSize,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Text(
               windSpeed,
               style: TextStyle(
-                fontSize: fontSize - 24,
-                fontWeight: FontWeight.w800,
+                fontSize: secondaryFontSize,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -52,11 +57,19 @@ class WeatherStamp extends StatelessWidget {
         Text(
           time.toString(),
           style: TextStyle(
-            fontSize: fontSize - 16,
-            fontWeight: FontWeight.w600,
+            fontSize: tempFontSize - 14,
+            fontWeight: FontWeight.w400,
           ),
         ),
       ],
     );
+  }
+
+  //Форматирование температуры и добавление плюса в начало
+  String _temperatureToString(double temp) {
+    int round = temp.round();
+    if (round < 0) return round.toString();
+    if (round > 1) return '+${round.toString()}';
+    return '0';
   }
 }

@@ -1,11 +1,13 @@
 part of 'location_bloc.dart';
 
-@immutable
 abstract class LocationState {}
 
+//Если местоположение потеряно или не установлено
 class LocationInitial extends LocationState {}
 
+//Местоположение установлено
 class LocationSet extends LocationState {
+  //Координаты (широта и долгота)
   final LatLng coords;
   final String ruName;
 
