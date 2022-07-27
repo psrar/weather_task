@@ -1,0 +1,1 @@
+const owmKey = '8c498ef7b5c1d90c8264708955b80979';
