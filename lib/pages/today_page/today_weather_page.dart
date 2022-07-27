@@ -28,9 +28,11 @@ class TodayWeatherPage extends StatelessWidget {
             Expanded(
               child: Text(
                 locationName,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 48,
+                  fontSize: 32,
                   fontWeight: FontWeight.bold,
                 ),
               ),
