@@ -1,4 +1,3 @@
-import 'package:weather_test/apis/geocoding_api.dart';
 import 'package:weather_test/apis/weather_api.dart';
 
 //Приложение получает доступ к WeatherApi через этот репозиторий
